@@ -1,52 +1,52 @@
 #lang racket
 
 (require parser-tools/lex
-         (prefix-in sre- parser-tools/lex-sre))
+         (prefix-in : parser-tools/lex-sre))
 
 (define-lex-abbrevs
-  (source-character (sre-+ (sre-: #\u0009 #\u000A #\u000D (sre-/ #\u0020 #\uFFFF))))
+  (source-character (:+ (:: #\u0009 #\u000A #\u000D (:/ #\u0020 #\uFFFF))))
   (unicode-bom #\uFEFF)
-  (whitespace (sre-or #\u0009 #\u0020))
-  (line-terminator (sre-or #\u000A (sre-: #\u000D (sre-- #\u000A)) (sre-: #\u000D #\u000A)))
-  (comment-char (sre-- source-character line-terminator))
-  (comment (sre-: #\# (sre-? (sre-+ comment-char))))
+  (whitespace (:or #\u0009 #\u0020))
+  (line-terminator (:or #\u000A (:: #\u000D (:- #\u000A)) (:: #\u000D #\u000A)))
+  (comment-char (:- source-character line-terminator))
+  (comment (:: #\# (:? (:+ comment-char))))
   (comma #\,)
-  (ignored (sre-or unicode-bom whitespace line-terminator comment comma))
+  (ignored (:or unicode-bom whitespace line-terminator comment comma))
 
-  (lower (sre-/ #\a #\z))
-  (upper (sre-/ #\A #\Z))
-  (digit (sre-/ #\0 #\9))
-  (nonzero-digit (sre-/ #\1 #\9))
-  (sign (sre-or #\+ #\-))
+  (lower (:/ #\a #\z))
+  (upper (:/ #\A #\Z))
+  (digit (:/ #\0 #\9))
+  (nonzero-digit (:/ #\1 #\9))
+  (sign (:or #\+ #\-))
   (negative-sign #\-)
-  (punctuator (sre-or #\! #\$ #\( #\) "..." #\: #\= #\@ #\[ #\] #\{ #\| #\}))
-  (name (sre-: (sre-or #\_ upper lower) (sre-* (sre-or #\_ digit upper lower))))
+  (punctuator (:or #\! #\$ #\( #\) "..." #\: #\= #\@ #\[ #\] #\{ #\| #\}))
+  (name (:: (:or #\_ upper lower) (:* (:or #\_ digit upper lower))))
 
-  (integer-part (sre-or (sre-: (sre-? negative-sign) #\0) (sre-: (sre-? negative-sign) nonzero-digit (sre-? (sre-+ digit)))))
+  (integer-part (:or (:: (:? negative-sign) #\0) (:: (:? negative-sign) nonzero-digit (:? (:+ digit)))))
   (int-value integer-part)
 
-  (fractional-part (sre-: #\. (sre-+ digit)))
-  (exponent-indicator (sre-or #\e #\E))
-  (exponent-part (sre-: exponent-indicator (sre-? sign) (sre-+ digit)))
+  (fractional-part (:: #\. (:+ digit)))
+  (exponent-indicator (:or #\e #\E))
+  (exponent-part (:: exponent-indicator (:? sign) (:+ digit)))
   (float-value
-    (sre-or (sre-: integer-part fractional-part)
-            (sre-: integer-part exponent-part)
-            (sre-: integer-part fractional-part exponent-part)))
+    (:or (:: integer-part fractional-part)
+         (:: integer-part exponent-part)
+         (:: integer-part fractional-part exponent-part)))
 
-  (escaped-unicode (sre-= 4 (sre-or digit (sre-/ #\A #\F) (sre-/ #\a #\f))))
-  (escaped-character (sre-or #\" #\\ #\/ #\b #\f #\n #\r #\t)) 
+  (escaped-unicode (:= 4 (:or digit (:/ #\A #\F) (:/ #\a #\f))))
+  (escaped-character (:or #\" #\\ #\/ #\b #\f #\n #\r #\t)) 
   (string-character
-    (sre-or (sre-- source-character (sre-or #\" #\\ line-terminator))
-            (sre-: #\u escaped-unicode)
-            (sre-: #\\ escaped-character)))
-  (block-quotation (sre-: #\" #\" #\"))
-  (escaped-block-quotation (sre-: #\\ block-quotation))
+    (:or (:- source-character (:or #\" #\\ line-terminator))
+         (:: #\u escaped-unicode)
+         (:: #\\ escaped-character)))
+  (block-quotation (:: #\" #\" #\"))
+  (escaped-block-quotation (:: #\\ block-quotation))
   (block-string-character
-    (sre-or (sre-- source-character (sre-or block-quotation escaped-block-quotation))
-            escaped-block-quotation))
+    (:or (:- source-character (:or block-quotation escaped-block-quotation))
+         escaped-block-quotation))
   (string-value
-    (sre-or (sre-: #\" (sre-? (sre-+ string-character)) #\")
-            (sre-: block-quotation (sre-? (sre-+ block-string-character)) block-quotation))))
+    (:or (:: #\" (:? (:+ string-character)) #\")
+         (:: block-quotation (:? (:+ block-string-character)) block-quotation))))
 
 (define gql-lexer
   (lexer
