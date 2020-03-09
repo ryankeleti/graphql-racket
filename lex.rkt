@@ -3,6 +3,12 @@
 (require parser-tools/lex
          (prefix-in : parser-tools/lex-sre))
 
+(provide gql-lexer
+         gql-lexer-list)
+
+(define-tokens tokens (Punctuator Name IntValue FloatValue StringValue))
+(define-empty-tokens empty-tokens (UnicodeBOM WhiteSpace LineTerminator Comment Comma))
+
 (define-lex-abbrevs
   [source-character (:or #\u0009 #\u000A #\u000D (:/ #\u0020 #\uFFFF))]
   [unicode-bom #\uFEFF]
@@ -50,18 +56,16 @@
 
 (define gql-lexer
   (lexer
-    [ignored
-     (gql-lexer input-port)]
-    [(eof)
-     (cons (list 'EOF lexeme) '())]
-    [punctuator
-     (cons (list 'Punctuator lexeme) (gql-lexer input-port))]
-    [name
-     (cons (list 'Name lexeme) (gql-lexer input-port))]
-    [int-value
-     (cons (list 'IntValue lexeme) (gql-lexer input-port))]
-    [float-value
-     (cons (list 'FloatValue lexeme) (gql-lexer input-port))]
-    [string-value
-     (cons (list 'StringValue lexeme) (gql-lexer input-port))]))
+    [(eof) 'EOF]
+    [ignored (gql-lexer input-port)]
+    [punctuator (token-Punctuator lexeme)]
+    [name (token-Name lexeme)]
+    [int-value (token-IntValue lexeme)]
+    [float-value (token-FloatValue lexeme)]
+    [string-value (token-StringValue lexeme)]))
+
+(define (gql-lexer-list in)
+  (let ([token (gql-lexer in)])
+    (if (eq? token 'EOF) '() (cons token (gql-lexer-list in)))))
+
 
