@@ -4,12 +4,12 @@
          (prefix-in : parser-tools/lex-sre))
 
 (define-lex-abbrevs
-  (source-character (:+ (:: #\u0009 #\u000A #\u000D (:/ #\u0020 #\uFFFF))))
+  (source-character (:or #\u0009 #\u000A #\u000D (:/ #\u0020 #\uFFFF)))
   (unicode-bom #\uFEFF)
   (whitespace (:or #\u0009 #\u0020))
-  (line-terminator (:or #\u000A (:: #\u000D (:- #\u000A)) (:: #\u000D #\u000A)))
+  (line-terminator (:or #\u000A (:: #\u000D (:- source-character #\u000A)) (:: #\u000D #\u000A)))
   (comment-char (:- source-character line-terminator))
-  (comment (:: #\# (:? (:+ comment-char))))
+  (comment (:: #\# (:* comment-char)))
   (comma #\,)
   (ignored (:or unicode-bom whitespace line-terminator comment comma))
 
@@ -50,6 +50,8 @@
 
 (define gql-lexer
   (lexer
+    [ignored
+     (gql-lexer input-port)]
     [(eof)
      (cons (list 'EOF lexeme) '())]
     [punctuator
@@ -58,12 +60,8 @@
      (cons (list 'Name lexeme) (gql-lexer input-port))]
     [int-value
      (cons (list 'IntValue lexeme) (gql-lexer input-port))]
-    [int-value
-     (cons (list 'IntValue lexeme) (gql-lexer input-port))]
     [float-value
      (cons (list 'FloatValue lexeme) (gql-lexer input-port))]
     [string-value
-     (cons (list 'StringValue lexeme) (gql-lexer input-port))]
-    [ignored
-     (gql-lexer input-port)]))
+     (cons (list 'StringValue lexeme) (gql-lexer input-port))]))
 
