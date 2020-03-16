@@ -6,7 +6,7 @@
 (provide gql-lexer
          gql-lexer-list)
 
-(define-tokens tokens (Punctuator Name IntValue FloatValue StringValue))
+(define-tokens lex-tokens (Punctuator Name IntValue FloatValue StringValue))
 (define-empty-tokens empty-tokens (UnicodeBOM WhiteSpace LineTerminator Comment Comma))
 
 (define-lex-abbrevs
@@ -68,4 +68,52 @@
   (let ([token (gql-lexer in)])
     (if (eq? token 'EOF) '() (cons token (gql-lexer-list in)))))
 
+(module+ test
+  (require rackunit)
+  (define (lexer-tester s)
+    (gql-lexer-list (open-input-string s)))
+
+  (check-equal?
+    (lexer-tester
+      "type Project {
+         name: String
+         # comment
+         tagline: String
+         contributors: [User] # comment
+       }")
+    (list
+      (token-Name       "type")
+      (token-Name       "Project")
+      (token-Punctuator "{")
+      (token-Name       "name")
+      (token-Punctuator ":")
+      (token-Name       "String")
+      (token-Name       "tagline")
+      (token-Punctuator ":")
+      (token-Name       "String")
+      (token-Name       "contributors")
+      (token-Punctuator ":")
+      (token-Punctuator "[")
+      (token-Name        "User")
+      (token-Punctuator "]")
+      (token-Punctuator "}")))
+  (check-equal?
+    (lexer-tester
+      "{
+         project(name: \"GraphQL\") {
+           tagline
+         }
+       }")
+    (list
+      (token-Punctuator  "{")
+      (token-Name        "project")
+      (token-Punctuator  "(")
+      (token-Name        "name")
+      (token-Punctuator  ":")
+      (token-StringValue "\"GraphQL\"")
+      (token-Punctuator  ")")
+      (token-Punctuator  "{")
+      (token-Name        "tagline")
+      (token-Punctuator  "}")
+      (token-Punctuator  "}"))))
 
